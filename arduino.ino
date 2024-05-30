@@ -1,4 +1,5 @@
 #include "WiFiS3.h"
+#include "WiFiSSLClient.h"
 
 #define SECRET_SSID "CS_Class"
 #define SECRET_PASS "26430686" 
@@ -9,9 +10,9 @@ int keyIndex = 0;
 
 int status = WL_IDLE_STATUS;
 
-char server[] = "sign.kenchou2006.eu.org";
+char server[] = "warningsign.pp.ua";
 
-WiFiClient client;
+WiFiSSLClient client;
 
 void setup() {
   Serial.begin(9600);
@@ -43,9 +44,8 @@ void setup() {
 
   if (client.connect(server, 443)) {
     Serial.println("connected to server");
-    // Make a HTTP request:
-    client.println("POST /output HTTP/1.1");
-    client.println("Host: ");
+    client.println("GET /output/ HTTP/1.1");
+    client.println("Host: warningsign.pp.ua");
     client.println("Connection: close");
     client.println();
   }
