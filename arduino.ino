@@ -6,11 +6,11 @@
 
 char ssid[] = "CS_Class";
 char pass[] = "26430686";
+char server[] = "warningsign.pp.ua";
 int keyIndex = 0;
-
 int status = WL_IDLE_STATUS;
 
-char server[] = "warningsign.pp.ua";
+char opendoor = false;
 
 WiFiSSLClient client;
 
@@ -48,34 +48,63 @@ void setup() {
     client.println("Host: warningsign.pp.ua");
     client.println("Connection: close");
     client.println();
+    }
   }
+
+void loop() {
+  if (!client.connected()) {
+    // 如果未连接，则重新连接
+    Serial.println("Attempting to reconnect to server...");
+    if (client.connect(server, 443)) {
+      Serial.println("Reconnected to server");
+      client.println("GET /output/ HTTP/1.1");
+      client.println("Host: warningsign.pp.ua");
+      client.println("Connection: close");
+      client.println();
+    } else {
+      Serial.println("Connection failed. Retrying in 5 seconds...");
+      delay(5000);
+      return;
+    }
+  }
+
+  // 读取服务器响应并打印内容
+  read_response();
+
+  // 延迟5秒钟
+  delay(5000);
 }
 
 void read_response() {
+  bool jsonStarted = false;
+  bool errorFound = false;
 
-  uint32_t received_data_num = 0;
   while (client.available()) {
     char c = client.read();
-    Serial.print(c);
-    received_data_num++;
-    if(received_data_num % 80 == 0) { 
-      Serial.println();
+    
+    if (c == '{') {
+      jsonStarted = true;
+    }
+
+    if (jsonStarted) {
+      Serial.print(c);
+
+      // 检查是否包含错误信息
+      if (c == ':' && errorFound) {
+        // 找到了 "status": "error"，将 opendoor 设为 false
+        opendoor = false;
+        errorFound = false;
+      } else if (c == '"') {
+        errorFound = !errorFound;
+      }
+    }
+
+    if (c == '}') {
+      jsonStarted = false;
     }
   }  
 }
 
-void loop() {  
-  read_response();
-
-  if (!client.connected()) {
-    Serial.println();
-    Serial.println("disconnecting from server.");
-    client.stop();
-
-    // do nothing forevermore:
-    while (true);
-  }
-}
 
 void printWifiStatus() {
   Serial.print("SSID: ");
